@@ -8,4 +8,6 @@ Ce dépôt accueille le script SQL (compatible DuckDB) de génération d'une bas
 - Prise en compte de l'encodage variable des fichiers annuels (utf-8 pour les plus récents, iso-8859 pour les plus anciens) ;
 - Base triée pour un format parquet de compression optimisée.
 
-Elle est disponible sur [data.gouv.fr](https://www.data.gouv.fr/datasets/base-nationale-des-deces-dedoublonnee)
+Elle est disponible sur [data.gouv.fr](https://www.data.gouv.fr/datasets/base-nationale-des-deces-dedoublonnee).
+
+Le script s'exécute en 6-7 minutes avec DuckDB 1.4+.
