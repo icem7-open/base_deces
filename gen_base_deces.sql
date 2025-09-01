@@ -42,7 +42,7 @@ CREATE OR REPLACE MACRO corrige_pays(p, c) AS
 CREATE OR REPLACE TABLE urls_deces AS 
 WITH t1 AS ( 
 		FROM read_json('https://www.data.gouv.fr/api/1/datasets/5de8f397634f4164071119c5/')
-		SELECT url: UNNEST(resources->>'$[*].url') 
+		SELECT url: unnest(resources->>'$[*].url') 
 	), t2 AS (
 		FROM t1 
 		SELECT lastfullyear: max(regexp_extract(url, '.*deces-(\d{4}).txt',1)) -- dernière année entière
@@ -112,7 +112,7 @@ TO 'tmp_deces.parquet' ; -- fichier parquet intermédiaire
 SET variable URL_OPPOSITION = (
 	WITH t1 AS ( 
 		FROM read_json('https://www.data.gouv.fr/api/1/datasets/5de8f397634f4164071119c5/')
-		SELECT url: UNNEST(resources->>'$[*].url')
+		SELECT url: unnest(resources->>'$[*].url')
 	) FROM t1 
 	SELECT url
 	WHERE url LIKE '%opposition%' LIMIT 1
@@ -137,3 +137,4 @@ TO 'deces_icem7.parquet' (COMPRESSION zstd, parquet_version v2);
 
 -- 5 réduction du fichier intermédiaire, à défaut de pouvoir le supprimer
 COPY (values(1)) TO 'tmp_deces.parquet' ;
+
