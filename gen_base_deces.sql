@@ -1,4 +1,4 @@
--- SCRIPT BASE NATIONALE DES DECES - DUCKDB 1.4+
+-- SCRIPT BASE NATIONALE DES DECES - DUCKDB
 
 -- 1 Fonctions de retraitement
 -- produit une date valide (typée date)
@@ -40,17 +40,17 @@ CREATE OR REPLACE MACRO corrige_pays(p, c) AS
 CREATE OR REPLACE TABLE urls_deces AS 
 WITH t1 AS ( 
 		FROM read_json('https://www.data.gouv.fr/api/1/datasets/5de8f397634f4164071119c5/')
-		SELECT unnest(resources, recursive := true)
+		SELECT url: UNNEST(list_transform(resources, LAMBDA c: c.url)) 
 	), t2 AS (
 		FROM t1 
-		SELECT lastfullyear: max(regexp_extract(url_1, '.*deces-(\d{4}).txt',1)) -- dernière année entière
-		WHERE url_1 ~ '.*deces-\d{4}.txt'
+		SELECT lastfullyear: max(regexp_extract(url, '.*deces-(\d{4}).txt',1)) -- dernière année entière
+		WHERE url ~ '.*deces-\d{4}.txt'
 	) 
 	FROM t1, t2 
-	SELECT  url: url_1,
-			an: regexp_extract(url_1, '.*deces-(\d{4}).*.txt',1)
-	WHERE url_1 ~ '.*deces-\d{4}.txt' -- années complètes
-	OR (url_1 ~ '.*deces-\d{4}-m\d{2}.txt'	
+	SELECT  url,
+			an: regexp_extract(url, '.*deces-(\d{4}).*.txt',1)
+	WHERE url ~ '.*deces-\d{4}.txt' -- années complètes
+	OR (url ~ '.*deces-\d{4}-m\d{2}.txt'	
 		AND an > t2.lastfullyear) 	  -- les mois de l'année en cours
 ;
 
@@ -110,10 +110,10 @@ TO 'c:/apps/datasets/tmp_deces.parquet' ; -- fichier parquet intermédiaire
 SET variable URL_OPPOSITION = (
 	WITH t1 AS ( 
 		FROM read_json('https://www.data.gouv.fr/api/1/datasets/5de8f397634f4164071119c5/')
-		SELECT unnest(resources, recursive := true)
+		SELECT url: UNNEST(list_transform(resources, LAMBDA c: c.url)) 
 	) FROM t1 
-	SELECT url_2
-	WHERE url_2 LIKE '%opposition%' LIMIT 1
+	SELECT url
+	WHERE url LIKE '%opposition%' LIMIT 1
 );
 
 -- élimination des oppositions et tri avant export parquet optimisé
