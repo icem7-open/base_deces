@@ -1,4 +1,4 @@
--- SCRIPT BASE NATIONALE DES DECES - DUCKDB
+-- SCRIPT DE GENERATION D'UNE BASE NATIONALE DES DECES NETTOYEE - COMPATIBLE DUCKDB
 
 -- 1 Fonctions de retraitement
 -- produit une date valide (typée date)
@@ -12,6 +12,7 @@ CREATE OR REPLACE MACRO corrige_date(s) AS
 	END ;
 
 -- caractérise la correction apportée pour produire une date valide
+-- 0 : date précise, 1 et 2 : date floue, 9 : date invalide ou inconnue
 CREATE OR REPLACE MACRO flou_date(s) AS
 	CASE WHEN s[1:4] BETWEEN '1000' AND '1830' THEN 9
 	WHEN try_strptime(s, '%Y%m%d') IS NOT NULL THEN 0 
@@ -36,11 +37,12 @@ CREATE OR REPLACE MACRO corrige_pays(p, c) AS
 	ELSE p END ;
 
 
--- 2 Liste des URLs à lire : annuelles et mensuelles pour l'année en cours
+-- 2 Liste des URLs à lire sur le dépôt https://www.data.gouv.fr/datasets/fichier-des-personnes-decedees/ 
+-- pointent vers des fichiers annuels, ou mensuels pour l'année en cours
 CREATE OR REPLACE TABLE urls_deces AS 
 WITH t1 AS ( 
 		FROM read_json('https://www.data.gouv.fr/api/1/datasets/5de8f397634f4164071119c5/')
-		SELECT url: UNNEST(list_transform(resources, LAMBDA c: c.url)) 
+		SELECT url: unnest(list_transform(resources, lambda c: c.url)) 
 	), t2 AS (
 		FROM t1 
 		SELECT lastfullyear: max(regexp_extract(url, '.*deces-(\d{4}).txt',1)) -- dernière année entière
@@ -54,7 +56,7 @@ WITH t1 AS (
 		AND an > t2.lastfullyear) 	  -- les mois de l'année en cours
 ;
 
--- constitution de deux sous listes d'urls, avant et après 2017
+-- constitution de deux sous listes d'urls, avant et après 2017 (encodages différents à gérer)
 SET variable URLS1 = (
 	FROM urls_deces
 	SELECT list(url)
@@ -69,7 +71,7 @@ SET variable URLS2 = (
 
 
 -- 3 Lecture groupée de tous les fichiers, décodage de chaque enregistrement + dédoublonnage
-LOAD encodings; 
+LOAD encodings ; 
 
 COPY (
 	WITH t1 AS (
@@ -102,7 +104,7 @@ COPY (
 	) FROM t2 
 		SELECT DISTINCT ON (date_deces0,code_insee_deces,nom,prenoms) * -- dédoublonnage
 ) 
-TO 'c:/apps/datasets/tmp_deces.parquet' ; -- fichier parquet intermédiaire
+TO 'tmp_deces.parquet' ; -- fichier parquet intermédiaire
 -- 5'
 
 
@@ -110,7 +112,7 @@ TO 'c:/apps/datasets/tmp_deces.parquet' ; -- fichier parquet intermédiaire
 SET variable URL_OPPOSITION = (
 	WITH t1 AS ( 
 		FROM read_json('https://www.data.gouv.fr/api/1/datasets/5de8f397634f4164071119c5/')
-		SELECT url: UNNEST(list_transform(resources, LAMBDA c: c.url)) 
+		SELECT url: unnest(list_transform(resources, lambda c: c.url)) 
 	) FROM t1 
 	SELECT url
 	WHERE url LIKE '%opposition%' LIMIT 1
@@ -125,13 +127,13 @@ COPY (
 		"Code du lieu de décès" AS code_insee_deces, 
 		"Numéro d'acte de décès" AS numero_acte_deces )
 	) 
-	FROM 'c:/apps/datasets/tmp_deces.parquet' dc  
+	FROM 'tmp_deces.parquet' dc  
 	ANTI JOIN t1 USING(date_deces0,code_insee_deces,numero_acte_deces)
 	ORDER BY fichier_origine, pays_naissance, code_insee_naissance, date_deces, nom
 ) 
-TO 'c:/apps/datasets/deces_icem7.parquet' (COMPRESSION zstd, parquet_version v2);
+TO 'base_deces.parquet' (COMPRESSION zstd, parquet_version v2);
 -- 1'
 
 
--- 5 réduction du fichier intermédiaire, à défaut de le supprimer
-COPY (values(1)) TO 'c:/apps/datasets/tmp_deces.parquet' ;
+-- 5 réduction du fichier intermédiaire, à défaut de pouvoir le supprimer
+COPY (values(1)) TO 'tmp_deces.parquet' ;
