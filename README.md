@@ -1,6 +1,6 @@
 # Base nationale des décès
 
-Ce dépôt accueille le script SQL de génération d'une base nationale des décès (source Insee) affinée, avec les retraitements suivants :
+Ce dépôt accueille le script SQL (compatible DuckDB) de génération d'une base nationale des décès (source Insee) affinée, avec les retraitements suivants :
 
 - Suppression de doublons (environ 220 000),
 - Recodage simplifié du pays de naissance,
