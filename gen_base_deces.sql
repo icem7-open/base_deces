@@ -120,6 +120,7 @@ SET variable URL_OPPOSITION = (
 );
 
 -- élimination des oppositions et tri avant export parquet optimisé
+-- le tri améliore la compression
 COPY (
 	WITH t1 AS (
 		FROM read_csv(getvariable('URL_OPPOSITION'))
@@ -138,3 +139,4 @@ TO 'base_deces.parquet' (COMPRESSION zstd, parquet_version v2);
 
 -- 5 réduction du fichier intermédiaire, à défaut de pouvoir le supprimer
 COPY (values(1)) TO 'tmp_deces.parquet' ;
+
