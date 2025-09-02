@@ -40,7 +40,7 @@ CREATE OR REPLACE MACRO corrige_pays(p, c) AS
 -- 2 Liste des URLs à lire sur le dépôt https://www.data.gouv.fr/datasets/fichier-des-personnes-decedees/ 
 -- pointent vers des fichiers annuels, ou mensuels pour l'année en cours
 CREATE OR REPLACE TABLE urls_deces AS 
-WITH t1 AS ( 
+	WITH t1 AS ( 
 		FROM read_json('https://www.data.gouv.fr/api/1/datasets/5de8f397634f4164071119c5/')
 		SELECT url: unnest(resources->>'$[*].url') 
 	), t2 AS (
@@ -51,7 +51,7 @@ WITH t1 AS (
 	FROM t1, t2 
 	SELECT  url,
 			an: regexp_extract(url, '.*deces-(\d{4}).*.txt',1)
-	WHERE url ~ '.*deces-\d{4}.txt' -- années complètes
+	WHERE url ~ '.*deces-\d{4}.txt'   -- années complètes
 	OR (url ~ '.*deces-\d{4}-m\d{2}.txt'	
 		AND an > t2.lastfullyear) 	  -- les mois de l'année en cours
 ;
@@ -109,6 +109,7 @@ TO 'tmp_deces.parquet' ; -- fichier parquet intermédiaire
 
 
 -- 4 tri du fichier et écriture finale
+-- récupération des oppositions
 SET variable URL_OPPOSITION = (
 	WITH t1 AS ( 
 		FROM read_json('https://www.data.gouv.fr/api/1/datasets/5de8f397634f4164071119c5/')
@@ -131,10 +132,9 @@ COPY (
 	ANTI JOIN t1 USING(date_deces0,code_insee_deces,numero_acte_deces)
 	ORDER BY fichier_origine, pays_naissance, code_insee_naissance, date_deces, nom
 ) 
-TO 'deces_icem7.parquet' (COMPRESSION zstd, parquet_version v2);
+TO 'base_deces.parquet' (COMPRESSION zstd, parquet_version v2);
 -- 1'
 
 
 -- 5 réduction du fichier intermédiaire, à défaut de pouvoir le supprimer
 COPY (values(1)) TO 'tmp_deces.parquet' ;
-
