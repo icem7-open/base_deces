@@ -3,7 +3,7 @@
 -- 1 Fonctions de retraitement
 -- produit une date valide (typée date)
 CREATE OR REPLACE MACRO corrige_date(s) AS
-	CASE WHEN s[1:4] BETWEEN '1000' AND '1830' THEN NULL
+	CASE WHEN s[1:4] BETWEEN '0100' AND '1830' OR s[1:4] > '2030' THEN NULL
 	WHEN try_strptime(s, '%Y%m%d') IS NOT NULL THEN try_strptime(s, '%Y%m%d') 
 	WHEN s = '00000000' OR try_cast(s[5:6] AS INT) > 12 THEN NULL::date
 	WHEN s[-4:] = '0000' THEN strptime(s[1:4] || '-07-01', '%Y-%m-%d')
@@ -14,7 +14,7 @@ CREATE OR REPLACE MACRO corrige_date(s) AS
 -- caractérise la correction apportée pour produire une date valide
 -- 0 : date précise, 1 et 2 : date floue, 9 : date invalide ou inconnue
 CREATE OR REPLACE MACRO flou_date(s) AS
-	CASE WHEN s[1:4] BETWEEN '1000' AND '1830' THEN 9
+	CASE WHEN s[1:4] BETWEEN '0100' AND '1830' OR s[1:4] > '2030' THEN 9
 	WHEN try_strptime(s, '%Y%m%d') IS NOT NULL THEN 0 
 	WHEN s = '00000000' OR try_cast(s[5:6] AS INT) > 12 THEN 9
 	WHEN s[-4:] = '0000' THEN 2
@@ -139,5 +139,6 @@ TO 'base_deces.parquet' (COMPRESSION zstd, parquet_version v2);
 
 -- 5 réduction du fichier intermédiaire, à défaut de pouvoir le supprimer
 COPY (values(1)) TO 'tmp_deces.parquet' ;
+
 
 
