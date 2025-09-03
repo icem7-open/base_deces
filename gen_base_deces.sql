@@ -6,7 +6,7 @@ CREATE OR REPLACE MACRO corrige_date(s) AS
 	CASE WHEN s[1:4] BETWEEN '1000' AND '1830' THEN NULL
 	WHEN try_strptime(s, '%Y%m%d') IS NOT NULL THEN try_strptime(s, '%Y%m%d') 
 	WHEN s = '00000000' OR try_cast(s[5:6] AS INT) > 12 THEN NULL::date
-	WHEN s[-4:] = '0000' THEN strptime(s[1:4] || '-06-01', '%Y-%m-%d')
+	WHEN s[-4:] = '0000' THEN strptime(s[1:4] || '-07-01', '%Y-%m-%d')
 	WHEN s[-2:] = '00' THEN strptime(s[1:4] || '-' || s[5:6] || '-15', '%Y-%m-%d')
 	ELSE NULL
 	END ;
@@ -139,4 +139,5 @@ TO 'base_deces.parquet' (COMPRESSION zstd, parquet_version v2);
 
 -- 5 réduction du fichier intermédiaire, à défaut de pouvoir le supprimer
 COPY (values(1)) TO 'tmp_deces.parquet' ;
+
 
